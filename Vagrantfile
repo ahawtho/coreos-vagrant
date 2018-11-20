@@ -23,6 +23,9 @@ IGNITION_CONFIG_PATH = File.join(File.dirname(__FILE__), "config.ign")
 CONFIG = File.join(File.dirname(__FILE__), "config.rb")
 
 # Defaults for config options defined in CONFIG
+$nfs_server="192.168.42.1"
+$nfs_options='nolock,vers=3,udp'
+$nfs_entrytag="NFS Mounts From Vagrantfile"
 $update_channel='stable'
 $num_instances = 1
 $instance_name_prefix = "core"
@@ -153,14 +156,20 @@ Vagrant.configure("2") do |config|
       config.ignition.ip = ip
 
       # Uncomment below to enable NFS for sharing the host machine into the coreos-vagrant VM.
-      #config.vm.synced_folder ".", "/home/core/share", id: "core", :nfs => true, :mount_options => ['nolock,vers=3,udp']
+      #config.vm.synced_folder ".", "/home/core/share", id: "core", :nfs => true, :mount_options => [ $nfs_options ]
+      $fstab_guts="### START #{$nfs_entrytag}\n"
       $shared_folders.each_with_index do |(host_folder, guest_folder), index|
-        config.vm.synced_folder host_folder.to_s, guest_folder.to_s, id: "core-share%02d" % index, nfs: true, mount_options: ['nolock,vers=3,udp']
+        config.vm.synced_folder host_folder.to_s, guest_folder.to_s, id: "core-share%02d" % index, nfs: true, mount_options: [ $nfs_options ]
+        $fstab_guts += "#{$nfs_server}:#{host_folder.to_s} #{guest_folder.to_s} nfs #{$nfs_options} 0 0\n"
       end
 
       if $share_home
-        config.vm.synced_folder ENV['HOME'], ENV['HOME'], id: "home", :nfs => true, :mount_options => ['nolock,vers=3,udp']
+        config.vm.synced_folder ENV['HOME'], ENV['HOME'], id: "home", :nfs => true, :mount_options => [ $nfs_options ]
+        $fstab_guts += "#{$nfs_server}:#{ENV['HOME']} #{ENV['HOME']} nfs #{$nfs_options} 0 0\n"
       end
+      $fstab_guts += "### END #{$nfs_entrytag}"
+      # Create an /etc/fstab file for the nfs mounts.  Create the file if it doesn't exist.
+      config.vm.provision :shell, :inline => "touch /etc/fstab && sed -i -e '/### START #{$nfs_entrytag}/,/### END #{$nfs_entrytag}/d' /etc/fstab && echo \"#{$fstab_guts}\" >> /etc/fstab", :privileged => true
 
       # This shouldn't be used for the virtualbox provider (it doesn't have any effect if it is though)
       if File.exist?(CLOUD_CONFIG_PATH)
