@@ -66,11 +66,11 @@ Vagrant.configure("2") do |config|
   config.ssh.forward_agent = true
 
   config.vm.box = "coreos-alpha"
-  config.vm.box_url = "https://alpha.release.core-os.net/amd64-usr/current/coreos_production_vagrant_virtualbox.json"
+  config.vm.box_url = "https://alpha.release.flatcar-linux.net/amd64-usr/current/flatcar_production_vagrant.box"
 
   ["vmware_fusion", "vmware_workstation"].each do |vmware|
     config.vm.provider vmware do |v, override|
-      override.vm.box_url = "https://alpha.release.core-os.net/amd64-usr/current/coreos_production_vagrant_vmware_fusion.json"
+      override.vm.box_url = "https://alpha.release.flatcar-linux.net/amd64-usr/current/flatcar_production_vagrant.box"
     end
   end
 
